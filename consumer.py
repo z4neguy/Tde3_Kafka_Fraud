@@ -2,6 +2,8 @@ from kafka import KafkaConsumer
 import json
 from datetime import datetime, timedelta
 from collections import defaultdict
+from db import Session
+from models import Transacao
 import logging
 logging.getLogger("kafka").setLevel(logging.WARNING)
 
@@ -66,11 +68,27 @@ def verifica_fraude(transacao):
 # ===============================
 # Loop principal
 # ===============================
+session = Session()
+
+
 try:
     for msg in consumer:
         transacao = msg.value
         fraude = verifica_fraude(transacao)
 
+        # Salva no banco
+        nova_transacao = Transacao(
+            transaction_id=transacao["transaction_id"],
+            client_id=transacao["client_id"],
+            amount=transacao["amount"],
+            city=transacao["city"],
+            timestamp=datetime.fromisoformat(transacao["timestamp"]),
+            tipo_fraude=fraude
+        )
+        session.add(nova_transacao)
+        session.commit()
+
+        # Logging
         if fraude:
             logging.warning(f"🚨 FRAUDE DETECTADA: {fraude} | "
                             f"Cliente: {transacao['client_id']} | "
@@ -82,3 +100,4 @@ try:
 
 except KeyboardInterrupt:
     logging.info("🛑 Encerrando consumer...")
+    session.close()
