@@ -65,12 +65,12 @@ def verifica_fraude(transacao):
 
     return None
 
+# Cria a sessão do banco
+session = Session()
+
 # ===============================
 # Loop principal
 # ===============================
-session = Session()
-
-
 try:
     for msg in consumer:
         transacao = msg.value
